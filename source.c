@@ -3,8 +3,8 @@
 #include "stdlib.h"
 
 #define HEADER  0xFE2F00
-#define TOKEN1  0x020001FD //Start
-#define TOKEN14 0x040001FB //End
+#define TOKENSTART  0x020001FD //Start
+#define TOKENEND    0x040001FB //End
 
 #define TOKEN4  0x03040BFC//0xFC0B0403
 
@@ -21,7 +21,6 @@
 
 
 
-#define TOKEN20 0x06001eFC
 #define TOKEN15 0xFFFFFFFF  //Flag
 #define TOKEN16 0x00000000  //Flag
 
@@ -66,16 +65,16 @@ int main()
             Buffer3 = Buffer3&0xFF0000FF;
         }
 
-		if((ReadBuffer[3] == 0x00)&&(ReadBuffer[2] == 0x00))
-		{
-			Buffer3 = 0;
-		}
+        if((ReadBuffer[3] == 0x00)&&(ReadBuffer[2] == 0x00))
+        {
+            Buffer3 = 0;
+        }
 
         memset(ReadBuffer,0,sizeof(ReadBuffer));
 
         switch(Buffer3)
         {
-            case TOKEN1:    //Start
+            case TOKENSTART:    //Start
                 {
                     uiStartCount++;
                     break;
@@ -122,25 +121,36 @@ int main()
                     while(1)
                     {
                         fread(ReadBuffer,1,1,fp);
-                        if((ReadBuffer[0] != 0xFF)&&1)
+
+                        if(ReadBuffer[0] != 0xFF)   //Checksum or FB
                         {
-                            break;
+                            fread(ReadBuffer,4,1,fp);
+                            Buffer3 = 0;
+                            memcpy(&Buffer3,ReadBuffer,sizeof(Buffer3));
+                            if(Buffer3 == TOKENEND)
+                            {
+                                break;              // New Device
+                            }
+                            else if((Buffer3&0x00FFFFFF) == (TOKENEND>>8))
+                            {
+                                fseek(fp,-1,SEEK_CUR);
+                                break;
+                            }
                         }
                     }
-                    break;
                 }
-            case TOKEN14:
+            case TOKENEND:
                 {
                     uiEndCount++;
                     break;
                 }   
             case TOKEN16:
-            case TOKEN20:
+            case TOKEN13:
                 {
                     break;
                 }
             default:
-				Buffer4 = ftell(fp);
+                Buffer4 = ftell(fp);
                 uiErrCount++;
                 break;
         }
